@@ -1,0 +1,5 @@
+[submodule "sourcedata/raw"]
+	path = sourcedata/raw
+	url = https://github.com/nipreps-data/bootcamp-geneva-2024-dataset
+	datalad-id = 2563dbc7-dd02-4014-abd1-cea0592aa0cd
+	datalad-url = https://github.com/nipreps-data/bootcamp-geneva-2024-dataset
