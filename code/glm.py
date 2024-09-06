@@ -23,6 +23,7 @@ layout.add_derivatives(
     validate=False,
 )
 
-bold_files = layout.get(suffix="bold", task="mixed", desc="preproc", extension=".nii.gz")
-events = layout.get_collections(level='run', task="mixed")
-
+bold_files = layout.get(
+    suffix="bold", task="mixed", desc="preproc", extension=".nii.gz"
+)
+events = layout.get_collections(level="run", task="mixed")
