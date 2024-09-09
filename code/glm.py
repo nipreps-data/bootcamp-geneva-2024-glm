@@ -14,6 +14,7 @@ from pathlib import Path
 import bids
 import bids.modeling.transformations
 import nibabel as nb
+from nilearn import glm
 import niworkflows as nw
 import niworkflows.data
 
@@ -25,6 +26,9 @@ def get_duration(img_path: os.PathLike | Path) -> float:
     return float(img.shape[3] * img.header.get_zooms()[3])
 
 
+if os.getcwd().endswith('code'):
+    os.chdir('..')
+
 layout = bids.BIDSLayout("sourcedata/raw")
 layout.add_derivatives(
     "sourcedata/derivatives/fmriprep-24.0.0",
@@ -32,13 +36,17 @@ layout.add_derivatives(
     validate=False,
 )
 
-orig_bold = layout.get(suffix="bold", task="mixed", desc=None, extension=".nii.gz")
-
+# Temporarily get raw files for testing
+# bold_files = layout.get(
+#     suffix="bold", task="mixed", space=None, extension=".nii.gz"
+# )
 bold_files = layout.get(
     suffix="bold", task="mixed", space="MNI152NLin2009cAsym", extension=".nii.gz"
 )
 
-for bold_file in bold_files:
+# for bold_file in bold_files:
+bold_file = bold_files[0]
+if True:
     # Extract entities that identify a given run
     bold_entities = bold_file.get_entities()
     bold_metadata = bold_file.get_metadata()
@@ -80,6 +88,9 @@ for bold_file in bold_files:
     design_matrix = df[variables.match_variables(["trial_type.*", "rot_?", "trans_?"])]
     design_matrix["intercept"] = 1
 
+    # Rename columns not to start with trial_type, for easier contrasts
+    design_matrix.columns = [col[11:] if col.startswith("trial_type.") else col for col in design_matrix.columns]
+
     dmat_fname = bids.layout.writing.build_path(
         {
             "suffix": "design",
@@ -93,3 +104,37 @@ for bold_file in bold_files:
     )
     Path(dmat_fname).parent.mkdir(parents=True, exist_ok=True)
     design_matrix.to_csv(dmat_fname, sep="\t", index=False)
+
+if True:
+    model = glm.first_level.FirstLevelModel(
+        smoothing_fwhm=5.0,  # FWHM, this should be a parameter
+    )
+
+    img = nb.load(bold_file)
+    data = img.get_fdata(dtype="float32")
+    ## Run the GLM
+    model.fit(img, design_matrices=design_matrix)
+
+motor = model.compute_contrast("motor")
+
+motor.shape
+
+from nilearn import plotting
+
+plotting.plot_stat_map(
+    motor,
+    colorbar=True,
+    title="First-level contrast: Motor",
+)
+
+# %matplotlib inline
+
+motor_vs_visual = model.compute_contrast("motor - visual")
+
+plotting.plot_stat_map(
+    motor_vs_visual,
+    colorbar=True,
+    title="First-level contrast: Motor - Visual",
+)
+
+
