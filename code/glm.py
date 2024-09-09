@@ -7,6 +7,7 @@
 #     "niworkflows",
 #     "nilearn",
 #     "pybids",
+#     "fitlins",
 # ]
 # ///
 import os
@@ -37,16 +38,19 @@ layout.add_derivatives(
 )
 
 # Temporarily get raw files for testing
-# bold_files = layout.get(
-#     suffix="bold", task="mixed", space=None, extension=".nii.gz"
-# )
 bold_files = layout.get(
-    suffix="bold", task="mixed", space="MNI152NLin2009cAsym", extension=".nii.gz"
+    suffix="bold", task="mixed", space=None, extension=".nii.gz"
 )
+# bold_files = layout.get(
+#     suffix="bold", task="mixed", space="MNI152NLin2009cAsym", extension=".nii.gz"
+# )
 
-# for bold_file in bold_files:
-bold_file = bold_files[0]
-if True:
+# +
+first_level_models = []
+
+for bold_file in bold_files:
+# bold_file = bold_files[0]
+# if True:
     # Extract entities that identify a given run
     bold_entities = bold_file.get_entities()
     bold_metadata = bold_file.get_metadata()
@@ -105,21 +109,59 @@ if True:
     Path(dmat_fname).parent.mkdir(parents=True, exist_ok=True)
     design_matrix.to_csv(dmat_fname, sep="\t", index=False)
 
-if True:
     model = glm.first_level.FirstLevelModel(
         smoothing_fwhm=5.0,  # FWHM, this should be a parameter
     )
+    first_level_models.append(model)
 
     img = nb.load(bold_file)
     data = img.get_fdata(dtype="float32")
     ## Run the GLM
     model.fit(img, design_matrices=design_matrix)
 
-motor = model.compute_contrast("motor")
+    path_patterns=[
+        "sub-{subject}/[ses-{session}/]sub-{subject}_[ses-{session}_][task-{task}_][run-{run}_]contrast-{contrast}_stat-{stat}_{suffix}{extension}",
+    ]
+    
+    for contrast in ("motor", "music", "visual", "motor - music", "motor - visual", "music - visual"):
+        effect = model.compute_contrast(contrast, output_type="effect_size")
+        variance = model.compute_contrast(contrast, output_type="effect_variance")
+        contrastValue = ''.join(("Vs" if part == "-" else part.capitalize()) for part in contrast.split())
+        effect_fname = bids.layout.writing.build_path(
+            {
+                "suffix": "statmap",
+                "extension": ".nii.gz",
+                "contrast": contrastValue,
+                "stat": "effect",
+                **selectors,
+            },
+            path_patterns=path_patterns,
+        )
+        var_fname = bids.layout.writing.build_path(
+            {
+                "suffix": "statmap",
+                "extension": ".nii.gz",
+                "contrast": contrastValue,
+                "stat": "variance",
+                **selectors,
+            },
+            path_patterns=path_patterns,
+        )
+        effect.to_filename(effect_fname)
+        variance.to_filename(var_fname)
+# -
 
-motor.shape
+import acres
 
-from nilearn import plotting
+first_level_layout = bids.BIDSLayout('.', config=['bids', acres.Loader('fitlins.data').cached('fitlins.json')], validate=False)
+
+first_level_layout.get(contrast='Motor')
+
+second_level = glm.second_level.SecondLevelModel()
+
+second_level.fit(first_level_models[:1] * 4)
+
+music = second_level.compute_contrast(first_level_contrast='music')
 
 plotting.plot_stat_map(
     motor,
@@ -132,9 +174,9 @@ plotting.plot_stat_map(
 motor_vs_visual = model.compute_contrast("motor - visual")
 
 plotting.plot_stat_map(
-    motor_vs_visual,
+    music,
     colorbar=True,
-    title="First-level contrast: Motor - Visual",
+    title="Second-level contrast: Music",
 )
 
 
