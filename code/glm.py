@@ -36,7 +36,7 @@ if os.getcwd().endswith("code"):
 # Collect raw data and derivatives in a single layout
 layout = bids.BIDSLayout("sourcedata/raw")
 layout.add_derivatives(
-    "sourcedata/derivatives/fmriprep-24.0.0",
+    "sourcedata/fmriprep-patch",
     config=[nw.data.load("nipreps.json")],
     validate=False,
 )
