@@ -10,6 +10,6 @@
 	datalad-url = https://github.com/nipreps-data/bootcamp-geneva-2024
 [submodule "sourcedata/fmriprep-patch"]
 	path = sourcedata/fmriprep-patch
-	url = /home/users/m/markiewc/scratch/bootcamp-2024
+	url = https://github.com/nipreps-data/bootcamp-geneva-2024-fmriprep-patch.git
 	datalad-id = c76ee594-6166-4743-a8bf-bdfc389cb356
-	datalad-url = /home/users/m/markiewc/scratch/bootcamp-2024
+	datalad-url = https://github.com/nipreps-data/bootcamp-geneva-2024-fmriprep-patch.git
