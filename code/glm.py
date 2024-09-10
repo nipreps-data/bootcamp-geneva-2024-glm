@@ -110,8 +110,9 @@ for bold_file in bold_files:
 
     # The design matrix is a DataFrame with the columns of interest, nuissance regressors,
     # and an intercept.
-    design_matrix = df[variables.match_variables(["trial_type.*", "rot_?", "trans_?"])]
-    design_matrix["intercept"] = 1
+    design_matrix = df[
+        variables.match_variables(["trial_type.*", "rot_?", "trans_?"])
+    ].assign(intercept=1)
 
     # Rename columns not to start with trial_type. This makes life easier when writing
     # contrasts as combinations of columns.
@@ -203,34 +204,32 @@ second_level.fit(first_level_models)
 # This should look familiar from above. Since it's the top-level, we don't need
 # any selectors to distinguish one run/session/subject from another.
 for contrast in contrasts:
-    effect = second_level.compute_contrast(
-        first_level_contrast=contrast, output_type="effect_size"
+    zscore = second_level.compute_contrast(
+        first_level_contrast=contrast, output_type="z_score"
     )
-    variance = second_level.compute_contrast(
-        first_level_contrast=contrast, output_type="effect_variance"
-    )
+    tdp = glm.cluster_level_inference(zscore, threshold=[1, 2, 3], alpha=0.05)
     contrastValue = "".join(
         ("Vs" if part == "-" else part.capitalize()) for part in contrast.split()
     )
-    effect_fname = bids.layout.writing.build_path(
+    zscore_fname = bids.layout.writing.build_path(
         {
             "suffix": "statmap",
             "extension": ".nii.gz",
             "contrast": contrastValue,
-            "stat": "effect",
+            "stat": "zscore",
         },
         path_patterns=stat_patterns,
     )
-    var_fname = bids.layout.writing.build_path(
+    tdp_fname = bids.layout.writing.build_path(
         {
             "suffix": "statmap",
             "extension": ".nii.gz",
             "contrast": contrastValue,
-            "stat": "variance",
+            "stat": "tdp",
         },
         path_patterns=stat_patterns,
     )
-    effect.to_filename(effect_fname)
-    variance.to_filename(var_fname)
+    zscore.to_filename(zscore_fname)
+    tdp.to_filename(tdp_fname)
 
 logging.debug("Done!")
